@@ -15,10 +15,34 @@ export async function backend(){
 export async function readData(): Promise<Data>{
   const sb = await backend();
   if(!sb) throw Error('Conexão ainda não configurada.');
+
+  const {data:{user},error:userError}=await sb.auth.getUser();
+  if(userError) throw userError;
+  if(!user) throw Error('Sessão expirada. Entre novamente.');
+
+  const isProvider=!!user.email;
+  const providerId=user.id;
+
+  const queries=isProvider
+    ? [
+        sb.from('hm_services').select('*').eq('provider_id',providerId),
+        sb.from('hm_clients').select('*').eq('provider_id',providerId),
+        sb.from('hm_bookings').select('*').eq('provider_id',providerId),
+        sb.from('hm_payments').select('*').eq('provider_id',providerId),
+        sb.from('hm_providers').select('*').eq('id',providerId),
+      ]
+    : [
+        sb.from('hm_services').select('*').eq('active',true),
+        sb.from('hm_clients').select('*'),
+        sb.from('hm_bookings').select('*'),
+        sb.from('hm_payments').select('*'),
+        sb.from('hm_providers').select('*'),
+      ];
+
   const names=['services','clients','bookings','payments','providers'] as const;
-  const result=await Promise.all(names.map(n=>sb.from('hm_'+n).select('*')));
+  const result=await Promise.all(queries);
   const data={} as Data;
-  result.forEach((r,i)=>{if(r.error)throw r.error;(data as any)[names[i]]=r.data});
+  result.forEach((r,i)=>{if(r.error)throw r.error;(data as any)[names[i]]=r.data||[]});
   return data;
 }
 
