@@ -74,3 +74,26 @@ git push
 ## Observação
 
 Esta versão é direcionada a demonstração. Antes de uso comercial/multiempresa, revise as políticas RLS e substitua consultas globais por consultas filtradas por `provider_id`/tenant.
+
+## Área do cliente
+
+A área simplificada do cliente fica em:
+
+```text
+/cliente
+/cliente/<slug-do-prestador>
+```
+
+No ambiente atual, `/cliente` redireciona para `/cliente/hora-marcada`.
+
+Fluxo do cliente:
+
+1. informa telefone com DDD;
+2. no primeiro acesso, informa nome e cria um PIN de 6 dígitos;
+3. nos próximos acessos, usa telefone + PIN;
+4. seleciona serviço, data e um horário livre;
+5. confirma o agendamento e acompanha/cancela os próximos horários.
+
+A autenticação do portal do cliente é independente do Supabase Auth usado pelos prestadores. O PIN é derivado com PBKDF2 + salt, sessões são armazenadas apenas como hash e há bloqueio temporário após tentativas inválidas. As credenciais e sessões ficam em tabelas sem acesso direto para `anon`/`authenticated`; o acesso ocorre pela Edge Function `client-portal`.
+
+> Para produção com prova de posse do telefone, substitua ou complemente o PIN por OTP via SMS/WhatsApp. O PIN mantém o demo sem custo de SMS, mas o primeiro cadastro não comprova que o telefone pertence à pessoa.
